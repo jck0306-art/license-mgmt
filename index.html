@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>자격증 시험 관리 (Cloud Sync)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  
+  <!-- Firebase SDK 모듈 로드 -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+       apiKey: "AIzaSyBQ0zSJleSHBjmecj1Qe-kmhLu-GDYXWE8",
+       authDomain: "license-mgmt-157ed.firebaseapp.com",
+       projectId: "license-mgmt-157ed",
+       storageBucket: "license-mgmt-157ed.firebasestorage.app",
+       messagingSenderId: "20449962943",
+       appId: "1:20449962943:web:35d36af2eb555d23760f0a"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const docRef = doc(db, "study_dashboard", "user_data");
+
+    const DEFAULT_DATA = {
+      selectedCertId: 'cert_1',
+      selectedSubId: null,
+      currentView: 'cert', // 'cert' | 'sheet' | 'achieved'
+      achievedCerts: [
+        { id: 'ach_1', name: '정보처리기사', issueDate: '2024-06-15', issuer: '한국산업인력공단', certNo: '24-20-123456', memo: '국가기술자격' }
+      ],
+      certs: [
+        {
+          id: 'cert_1',
+          name: '산업보안관리사',
+          googleSheetUrl: '',
+          schedules: [
+            { id: 'sch_1', name: '2026년 정기 시험', date: '2026-10-17', applied: '접수완료', result: '대기' }
+          ],
+          memos: [
+            { id: 'm1', content: '산업기술유출방지법 및 영업비밀보호법 주요 판례 숙지' }
+          ],
+          subjects: [
+            { id: 's1', name: '1과목: 관리적보안 (25문항)', count: 0, notes: [{ id: 'n1', title: '보안정책 수립 절차', body: '계획 수립 -> 위험평가 -> 정책 작성 -> 승인/공표 -> 교육 및 시행', done: false }] },
+            { id: 's2', name: '2과목: 물리적보안 (25문항)', count: 0, notes: [] },
+            { id: 's3', name: '3과목: 기술적보안 (25문항)', count: 0, notes: [] },
+            { id: 's4', name: '4과목: 보안사고대응 (25문항)', count: 0, notes: [] },
+            { id: 's5', name: '5과목: 보안지식경영 (25문항)', count: 0, notes: [] }
+          ]
+        },
+        {
+          id: 'cert_2',
+          name: 'ISMS-P 실기',
+          googleSheetUrl: '',
+          schedules: [
+            { id: 'sch_1', name: '2026년 실기 시험', date: '2026-10-24', applied: '접수예정', result: '대기' }
+          ],
+          memos: [
+            { id: 'm1', content: '결함 보고서 작성 시 기준번호와 근거조항 정확히 매핑하기' }
+          ],
+          subjects: [
+            { id: 's1', name: '1. 관리체계 수립 및 운영', count: 0, notes: [] },
+            { id: 's2', name: '2. 보호대책 요구사항', count: 0, notes: [] },
+            { id: 's3', name: '3. 개인정보 처리단계별 요구사항', count: 0, notes: [] },
+            { id: 's4', name: '인증기준 결함사례 판단 연습', count: 0, notes: [] }
+          ]
+        },
+        {
+          id: 'cert_3',
+          name: '정보보안기사 실기',
+          googleSheetUrl: '',
+          schedules: [
+            { id: 'sch_1', name: '2026년 제3회 실기', date: '2026-11-14', applied: '접수예정', result: '대기' }
+          ],
+          memos: [
+            { id: 'm1', content: 'Snort 룰 문법 및 iptables 명령줄 작성법 숙지' }
+          ],
+          subjects: [
+            { id: 's1', name: '시스템 보안', count: 0, notes: [] },
+            { id: 's2', name: '네트워크 보안', count: 0, notes: [] },
+            { id: 's3', name: '애플리케이션 보안', count: 0, notes: [] },
+            { id: 's4', name: '정보보안 일반 & 관리/법규', count: 0, notes: [] },
+            { id: 's5', name: '실기 서술형/실무형 기출 풀이', count: 0, notes: [] }
+          ]
+        },
+        {
+          id: 'cert_4',
+          name: 'CPPG (개인정보관리사)',
+          googleSheetUrl: '',
+          schedules: [
+            { id: 'sch_1', name: '2026년 제37회 시험', date: '2026-12-06', applied: '접수예정', result: '대기' }
+          ],
+          memos: [
+            { id: 'm1', content: '개인정보보호법 개정사항 및 가명정보 처리 가이드라인 확인' }
+          ],
+          subjects: [
+            { id: 's1', name: '1영역: 개인정보 보호의 이해', count: 0, notes: [] },
+            { id: 's2', name: '2영역: 개인정보 보호 법령 및 제도', count: 0, notes: [] },
+            { id: 's3', name: '3영역: 라이프사이클 관리', count: 0, notes: [] },
+            { id: 's4', name: '4영역: 개인정보 보호조치', count: 0, notes: [] },
+            { id: 's5', name: '5영역: 관리체계 및 거버넌스', count: 0, notes: [] }
+          ]
+        }
+      ]
+    };
+
+    window.appData = null;
+
+    window.saveState = async function() {
+      if (!window.appData) return;
+      document.getElementById('sync-status').innerHTML = '<i class="fa-solid fa-arrows-rotate animate-spin text-amber-400"></i> 동기화 중...';
+      try {
+        await setDoc(docRef, window.appData);
+        document.getElementById('sync-status').innerHTML = '<i class="fa-solid fa-cloud text-emerald-400"></i> 클라우드 저장됨';
+      } catch (e) {
+        console.error("Save error:", e);
+        document.getElementById('sync-status').innerHTML = '<i class="fa-solid fa-triangle-exclamation text-rose-400"></i> 저장 오류';
+      }
+    };
+
+    onSnapshot(docRef, async (docSnap) => {
+      if (docSnap.exists()) {
+        window.appData = docSnap.data();
+        if (!window.appData.currentView) window.appData.currentView = 'cert';
+        if (!window.appData.achievedCerts) window.appData.achievedCerts = [];
+        window.appData.certs.forEach(c => {
+          if (!c.memos) c.memos = [];
+          if (c.googleSheetUrl === undefined) c.googleSheetUrl = '';
+          if (!c.schedules || c.schedules.length === 0) {
+            const defaultDate = c.targetDate || (c.id === 'cert_1' ? '2026-10-17' : c.id === 'cert_2' ? '2026-10-24' : c.id === 'cert_3' ? '2026-11-14' : '2026-12-06');
+            c.schedules = [{ id: 'sch_' + Date.now(), name: '2026년 정기 시험', date: defaultDate, applied: '접수예정', result: '대기' }];
+          }
+          c.subjects.forEach(s => { if (!s.notes) s.notes = []; });
+        });
+      } else {
+        window.appData = DEFAULT_DATA;
+        await setDoc(docRef, DEFAULT_DATA);
+      }
+      document.getElementById('sync-status').innerHTML = '<i class="fa-solid fa-cloud text-emerald-400"></i> 클라우드 동기화 완료';
+      render();
+    }, (error) => {
+      console.error("Snapshot error:", error);
+      document.getElementById('sync-status').innerHTML = '<i class="fa-solid fa-circle-exclamation text-rose-400"></i> DB 연결 오류';
+    });
+
+    function calculateDDay(dateString) {
+      if (!dateString) return '-';
+      const target = new Date(dateString + "T00:00:00");
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const diff = target - today;
+      const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+      if (days === 0) return 'D-Day';
+      return days > 0 ? `D-${days}` : `D+${Math.abs(days)}`;
+    }
+
+    function getNearestSchedule(cert) {
+      if (!cert.schedules || cert.schedules.length === 0) return null;
+      const today = new Date().toISOString().slice(0, 10);
+      const upcoming = cert.schedules.filter(s => s.date >= today).sort((a, b) => a.date.localeCompare(b.date));
+      return upcoming.length > 0 ? upcoming[0] : cert.schedules[0];
+    }
+
+    function renderSidebar() {
+      const listEl = document.getElementById('cert-list');
+      if (!window.appData || !window.appData.certs) return;
+      
+      const currentCert = window.appData.certs.find(c => c.id === window.appData.selectedCertId) || window.appData.certs[0];
+      const sheetBtnText = document.getElementById('sheet-btn-label');
+      if (sheetBtnText && currentCert) {
+        sheetBtnText.innerText = `${currentCert.name} 시트 열기`;
+      }
+
+      // 취득 자격증 보관함 활성화 상태 표시
+      const achievedBtn = document.getElementById('achieved-menu-btn');
+      if (achievedBtn) {
+        if (window.appData.currentView === 'achieved') {
+          achievedBtn.className = "w-full text-left p-2.5 rounded-lg flex items-center justify-between text-sm transition bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40 mb-3 shadow";
+        } else {
+          achievedBtn.className = "w-full text-left p-2.5 rounded-lg flex items-center justify-between text-sm transition text-slate-300 hover:bg-slate-700/50 mb-3";
+        }
+      }
+      const achievedCountBadge = document.getElementById('achieved-count-badge');
+      if (achievedCountBadge) {
+        achievedCountBadge.innerText = (window.appData.achievedCerts || []).length;
+      }
+
+      listEl.innerHTML = window.appData.certs.map(cert => {
+        const isCertSelected = window.appData.currentView === 'cert' && cert.id === window.appData.selectedCertId;
+        const nearest = getNearestSchedule(cert);
+        const ddayText = nearest ? calculateDDay(nearest.date) : '-';
+
+        return `
+          <li class="space-y-1">
+            <button onclick="selectCert('${cert.id}')" class="w-full text-left p-2.5 rounded-lg flex items-center justify-between text-sm transition ${
+              isCertSelected && !window.appData.selectedSubId ? 'bg-indigo-600/30 text-indigo-300 font-bold border border-indigo-500/40' : 'text-slate-300 hover:bg-slate-700/50'
+            }">
+              <div class="flex items-center gap-2 truncate">
+                <i class="fa-solid ${isCertSelected ? 'fa-folder-open text-indigo-400' : 'fa-folder text-slate-400'} text-xs"></i>
+                <span class="truncate">${cert.name}</span>
+              </div>
+              <span class="text-[11px] px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-indigo-300 font-mono font-semibold">${ddayText}</span>
+            </button>
+
+            ${isCertSelected ? `
+              <ul class="pl-3 pr-1 py-1 space-y-1 border-l border-slate-700/70 ml-3">
+                ${cert.subjects.map(sub => {
+                  const isSubSelected = isCertSelected && window.appData.selectedSubId === sub.id;
+                  const noteCount = (sub.notes || []).length;
+                  return `
+                    <li>
+                      <button onclick="selectSubject('${cert.id}', '${sub.id}')" class="w-full text-left px-2.5 py-1.5 rounded text-xs flex items-center justify-between transition ${
+                        isSubSelected ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                      }">
+                        <span class="truncate flex items-center gap-1.5">
+                          <i class="fa-solid fa-book-bookmark text-slate-500 text-[10px]"></i>
+                          ${sub.name}
+                        </span>
+                        <span class="text-[10px] text-slate-500 font-mono">(${noteCount})</span>
+                      </button>
+                    </li>
+                  `;
+                }).join('')}
+              </ul>
+            ` : ''}
+          </li>
+        `;
+      }).join('');
+    }
+
+    function renderMain() {
+      if (!window.appData) return;
+
+      // 1. 취득 자격증 관리 화면
+      if (window.appData.currentView === 'achieved') {
+        renderAchievedCertsView();
+        return;
+      }
+
+      // 2. 구글 시트 뷰 모드
+      const cert = window.appData.certs.find(c => c.id === window.appData.selectedCertId) || window.appData.certs[0];
+      if (!cert) {
+        document.getElementById('main-content').innerHTML = `<div class="text-slate-500">선택된 자격증이 없습니다.</div>`;
+        return;
+      }
+
+      if (window.appData.currentView === 'sheet') {
+        renderGoogleSheetView(cert);
+        return;
+      }
+
+      if (window.appData.selectedSubId) {
+        renderSubjectDetailPage(cert, window.appData.selectedSubId);
+      } else {
+        renderCertDashboard(cert);
+      }
+    }
+
+    // 🏆 취득 자격증 보관함 메인 렌더링
+    function renderAchievedCertsView() {
+      const list = window.appData.achievedCerts || [];
+
+      document.getElementById('main-content').innerHTML = `
+        <div class="space-y-6">
+          <div class="flex justify-between items-center">
+            <div>
+              <h2 class="text-2xl font-bold text-white flex items-center gap-2.5">
+                <i class="fa-solid fa-award text-amber-400"></i> 취득 자격증 보관함
+              </h2>
+              <p class="text-xs text-slate-400 mt-1">내가 취득한 자격증의 취득일자, 발급기관, 자격증 번호를 관리하세요.</p>
+            </div>
+            <button onclick="openAchievedModal()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-4 py-2 rounded-lg transition flex items-center gap-1.5 shadow">
+              <i class="fa-solid fa-plus"></i> 취득 자격증 등록
+            </button>
+          </div>
+
+          <!-- 자격증 카드 그리드 -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            ${list.length === 0 ? `
+              <div class="col-span-full py-16 text-center bg-slate-800 rounded-xl border border-dashed border-slate-700 text-slate-400 text-sm">
+                <i class="fa-solid fa-certificate text-3xl text-slate-600 mb-2 block"></i>
+                등록된 취득 자격증이 없습니다. 새로운 취득 자격증을 추가해 보세요!
+              </div>
+            ` : list.map(item => `
+              <div class="bg-slate-800 rounded-xl border border-slate-700 p-5 shadow-lg relative group hover:border-slate-600 transition">
+                <div class="flex justify-between items-start mb-3">
+                  <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                      <i class="fa-solid fa-award"></i>
+                    </div>
+                    <div>
+                      <h3 class="font-bold text-white text-base">${item.name}</h3>
+                      <span class="text-[11px] text-indigo-400 font-medium">${item.issuer || '주관사 미기재'}</span>
+                    </div>
+                  </div>
+                  <div class="flex gap-1">
+                    <button onclick="openAchievedModal('${item.id}')" class="text-slate-400 hover:text-amber-300 p-1.5 rounded hover:bg-slate-700 text-xs" title="수정">
+                      <i class="fa-solid fa-pen"></i>
+                    </button>
+                    <button onclick="deleteAchievedCert('${item.id}')" class="text-slate-400 hover:text-rose-400 p-1.5 rounded hover:bg-slate-700 text-xs" title="삭제">
+                      <i class="fa-solid fa-trash"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="space-y-1.5 text-xs text-slate-300 bg-slate-900/60 p-3 rounded-lg border border-slate-700/50">
+                  <div class="flex justify-between">
+                    <span class="text-slate-500">취득 일자:</span>
+                    <span class="font-mono font-semibold text-slate-200">${item.issueDate || '-'}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-slate-500">자격증 번호:</span>
+                    <span class="font-mono font-semibold text-amber-300">${item.certNo || '-'}</span>
+                  </div>
+                  ${item.memo ? `
+                    <div class="pt-1.5 border-t border-slate-700/60 text-slate-400 text-[11px]">
+                      ${item.memo}
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // 구글 시트 뷰 화면
+    function renderGoogleSheetView(cert) {
+      const url = cert.googleSheetUrl || '';
+
+      document.getElementById('main-content').innerHTML = `
+        <div class="h-full flex flex-col">
+          <div class="mb-4 flex flex-wrap justify-between items-center gap-2">
+            <div>
+              <button onclick="selectCert('${cert.id}')" class="text-xs text-indigo-400 hover:underline flex items-center gap-1 mb-1.5">
+                <i class="fa-solid fa-arrow-left"></i> ${cert.name} 대시보드로 돌아가기
+              </button>
+              <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-table-cells text-emerald-400"></i> ${cert.name} 전용 스프레드시트
+              </h2>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="setCertGoogleSheetUrlPrompt('${cert.id}')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-1.5 rounded transition">
+                <i class="fa-solid fa-link"></i> 시트 링크 수정
+              </button>
+              ${url ? `
+                <a href="${url}" target="_blank" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded transition flex items-center gap-1 font-semibold">
+                  <i class="fa-solid fa-arrow-up-right-from-square"></i> 새 창에서 열기
+                </a>
+              ` : ''}
+            </div>
+          </div>
+
+          ${!url ? `
+            <div class="flex-1 flex flex-col items-center justify-center p-10 bg-slate-800 rounded-xl border border-dashed border-slate-700 text-center">
+              <i class="fa-regular fa-file-excel text-4xl text-emerald-500/60 mb-3"></i>
+              <h3 class="text-base font-bold text-white mb-1">[${cert.name}]에 등록된 구글 시트가 없습니다</h3>
+              <p class="text-xs text-slate-400 mb-4">이 자격증 공부에 사용하는 구글 스프레드시트의 공유 URL을 등록해 주세요.</p>
+              <button onclick="setCertGoogleSheetUrlPrompt('${cert.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-4 py-2 rounded-lg font-semibold transition">
+                구글 시트 URL 등록하기
+              </button>
+            </div>
+          ` : `
+            <div class="flex-1 bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-xl min-h-[calc(100vh-180px)]">
+              <iframe src="${url}" class="w-full h-full min-h-[600px] border-0" allow="clipboard-write"></iframe>
+            </div>
+          `}
+        </div>
+      `;
+    }
+
+    function renderSubjectDetailPage(cert, subId) {
+      const sub = cert.subjects.find(s => s.id === subId);
+      if (!sub) return renderCertDashboard(cert);
+      if (!sub.notes) sub.notes = [];
+
+      document.getElementById('main-content').innerHTML = `
+        <div class="mb-6 flex justify-between items-center">
+          <div>
+            <button onclick="selectCert('${cert.id}')" class="text-xs text-indigo-400 hover:underline flex items-center gap-1 mb-2">
+              <i class="fa-solid fa-arrow-left"></i> ${cert.name} 종합 대시보드로 돌아가기
+            </button>
+            <div class="flex items-center gap-3">
+              <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-book-open text-amber-400"></i> ${sub.name}
+              </h2>
+              <button onclick="editSubjectNamePrompt('${cert.id}', '${sub.id}')" class="text-xs text-slate-400 hover:text-amber-300 border border-slate-700 px-2.5 py-1 rounded bg-slate-800 transition">
+                <i class="fa-solid fa-pen"></i> 과목명 수정
+              </button>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">과목별 핵심 키워드, 법조문, 두문자 암기 사항을 정리하고 체크하세요.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1 text-xs bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
+              <span class="text-slate-400">과목 회독수:</span>
+              <span class="font-bold text-indigo-400 font-mono">${sub.count || 0}회</span>
+              <button onclick="updateCount('${cert.id}', '${sub.id}', 1)" class="ml-1 px-1.5 py-0.5 bg-slate-700 hover:bg-slate-600 rounded text-white font-bold">+</button>
+              <button onclick="updateCount('${cert.id}', '${sub.id}', -1)" class="px-1.5 py-0.5 bg-slate-700 hover:bg-slate-600 rounded text-white font-bold">-</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-slate-800 rounded-xl border border-slate-700 p-5 mb-6 shadow-lg">
+          <h3 class="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-plus-circle text-amber-400"></i> 새로운 암기 카드 등록
+          </h3>
+          <div class="space-y-3">
+            <input id="note-title-input" type="text" placeholder="암기 키워드 / 법조문 / 핵심 제목" 
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400" />
+            <textarea id="note-body-input" rows="3" placeholder="상세 암기 내용 (두문자, 요약 정리, 풀이 팁 등)" 
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-amber-400"></textarea>
+            <div class="flex justify-end">
+              <button onclick="addSubjectNoteInline('${cert.id}', '${sub.id}')" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-5 py-2.5 rounded-lg transition flex items-center gap-1.5">
+                <i class="fa-solid fa-floppy-disk"></i> 암기 카드 등록
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <div class="flex justify-between items-center mb-2">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">암기 카드 리스트 (${sub.notes.length})</h3>
+            <span class="text-xs text-slate-500">체크박스를 누르면 암기 완료 상태로 바뀝니다.</span>
+          </div>
+          ${sub.notes.length === 0 ? `
+            <div class="text-center py-12 text-slate-500 text-sm border border-dashed border-slate-700 rounded-xl bg-slate-800/40">
+              등록된 암기 내용이 없습니다. 위 작성란에서 첫 번째 암기 카드를 추가해 보세요!
+            </div>
+          ` : sub.notes.map(note => `
+            <div class="p-4 rounded-xl bg-slate-800 border ${note.done ? 'border-emerald-500/40 bg-slate-800/50' : 'border-slate-700'} transition group shadow-md space-y-2">
+              <div class="flex items-start justify-between gap-3">
+                <label class="flex items-center gap-2.5 cursor-pointer select-none">
+                  <input type="checkbox" ${note.done ? 'checked' : ''} onchange="toggleNoteDoneInline('${cert.id}', '${sub.id}', '${note.id}')" class="w-4 h-4 rounded text-emerald-500 bg-slate-900 border-slate-600 focus:ring-0">
+                  <span class="font-bold text-sm ${note.done ? 'line-through text-slate-500' : 'text-amber-300'}">${note.title}</span>
+                </label>
+                <div class="flex items-center gap-1 opacity-80 group-hover:opacity-100">
+                  <button onclick="editSubjectNoteInline('${cert.id}', '${sub.id}', '${note.id}')" class="text-slate-400 hover:text-amber-300 p-1.5 rounded hover:bg-slate-700 text-xs" title="수정">
+                    <i class="fa-solid fa-pen"></i>
+                  </button>
+                  <button onclick="deleteSubjectNoteInline('${cert.id}', '${sub.id}', '${note.id}')" class="text-slate-400 hover:text-rose-400 p-1.5 rounded hover:bg-slate-700 text-xs" title="삭제">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+              <p class="text-xs text-slate-300 whitespace-pre-wrap pl-6 leading-relaxed ${note.done ? 'text-slate-500' : ''}">${note.body || ''}</p>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function renderCertDashboard(cert) {
+      if (!cert.memos) cert.memos = [];
+      if (!cert.schedules) cert.schedules = [];
+
+      const nearest = getNearestSchedule(cert);
+      const topDday = nearest ? calculateDDay(nearest.date) : '-';
+
+      document.getElementById('main-content').innerHTML = `
+        <div class="flex justify-between items-start mb-6">
+          <div>
+            <h2 class="text-2xl font-bold text-white mb-1 flex items-center gap-3">
+              ${cert.name}
+              <span class="text-sm bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 px-2.5 py-0.5 rounded-full font-mono font-semibold">
+                ${topDday}
+              </span>
+            </h2>
+            <p class="text-sm text-slate-400">2026년 시험 일정 및 전용 구글 시트를 관리하세요.</p>
+          </div>
+          <button onclick="deleteCert('${cert.id}')" class="text-xs text-rose-400 hover:text-rose-300 border border-rose-500/30 px-3 py-1.5 rounded transition hover:bg-rose-500/10">자격증 삭제</button>
+        </div>
+
+        <!-- 📌 2026년 시험 일정 테이블 -->
+        <div class="bg-slate-800 rounded-xl border border-slate-700 p-5 mb-6 shadow-lg">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="font-bold text-white text-sm flex items-center gap-2">
+              <i class="fa-solid fa-calendar-check text-indigo-400"></i> 시험 일정 & 응시 / 합불 관리
+            </h3>
+            <button onclick="addSchedulePrompt('${cert.id}')" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1.5 rounded transition flex items-center gap-1 font-semibold">
+              <i class="fa-solid fa-plus"></i> 시험 일정 추가
+            </button>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-700 uppercase font-semibold">
+                <tr>
+                  <th class="p-2.5">회차/구분 (수정 가능)</th>
+                  <th class="p-2.5">시험일자 (D-Day)</th>
+                  <th class="p-2.5">응시 여부</th>
+                  <th class="p-2.5">합격 여부</th>
+                  <th class="p-2.5 text-right">관리</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-700/60">
+                ${cert.schedules.length === 0 ? `
+                  <tr><td colspan="5" class="p-4 text-center text-slate-500">등록된 시험 일정이 없습니다. 일정을 추가해보세요.</td></tr>
+                ` : cert.schedules.map(sch => {
+                  const dday = calculateDDay(sch.date);
+                  return `
+                    <tr class="hover:bg-slate-900/40">
+                      <td class="p-2.5 font-medium text-slate-200">
+                        <div class="flex items-center gap-1.5">
+                          <span>${sch.name}</span>
+                          <button onclick="editScheduleNamePrompt('${cert.id}', '${sch.id}')" class="text-slate-500 hover:text-amber-300 text-xs p-1" title="회차명 수정">
+                            <i class="fa-solid fa-pen"></i>
+                          </button>
+                        </div>
+                      </td>
+                      <td class="p-2.5 font-mono">
+                        <div class="flex items-center gap-1.5">
+                          <input type="date" value="${sch.date}" onchange="updateScheduleDate('${cert.id}', '${sch.id}', this.value)" class="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-xs text-white focus:outline-none focus:border-indigo-500" />
+                          <span class="text-[11px] px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-indigo-400 font-bold">${dday}</span>
+                        </div>
+                      </td>
+                      <td class="p-2.5">
+                        <select onchange="updateScheduleStatus('${cert.id}', '${sch.id}', 'applied', this.value)" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 cursor-pointer">
+                          <option value="접수예정" ${sch.applied === '접수예정' ? 'selected' : ''}>접수예정</option>
+                          <option value="접수완료" ${sch.applied === '접수완료' ? 'selected' : ''}>접수완료</option>
+                          <option value="응시완료" ${sch.applied === '응시완료' ? 'selected' : ''}>응시완료</option>
+                          <option value="미응시" ${sch.applied === '미응시' ? 'selected' : ''}>미응시</option>
+                        </select>
+                      </td>
+                      <td class="p-2.5">
+                        <select onchange="updateScheduleStatus('${cert.id}', '${sch.id}', 'result', this.value)" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 cursor-pointer">
+                          <option value="대기" ${sch.result === '대기' ? 'selected' : ''}>결과대기</option>
+                          <option value="합격" ${sch.result === '합격' ? 'selected' : ''}>🎉 합격</option>
+                          <option value="불합격" ${sch.result === '불합격' ? 'selected' : ''}>불합격</option>
+                        </select>
+                      </td>
+                      <td class="p-2.5 text-right">
+                        <button onclick="deleteSchedule('${cert.id}', '${sch.id}')" class="text-slate-500 hover:text-rose-400 p-1" title="일정 삭제"><i class="fa-solid fa-trash"></i></button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 자격증 전용 구글 시트 링크 관리 카드 -->
+        <div class="bg-slate-800 rounded-xl border border-slate-700 p-4 mb-6 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+              <i class="fa-solid fa-file-excel text-lg"></i>
+            </div>
+            <div>
+              <h4 class="text-sm font-bold text-white flex items-center gap-2">
+                ${cert.name} 전용 구글 시트
+                <span class="text-[10px] px-2 py-0.5 rounded ${cert.googleSheetUrl ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700 text-slate-400'} font-normal">
+                  ${cert.googleSheetUrl ? '연동됨' : '미등록'}
+                </span>
+              </h4>
+              <p class="text-xs text-slate-400">${cert.googleSheetUrl ? '등록된 스프레드시트를 대시보드 안에서 바로 열고 편집할 수 있습니다.' : '이 자격증에 사용할 구글 시트 링크를 등록해 보세요.'}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="setCertGoogleSheetUrlPrompt('${cert.id}')" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-lg transition font-medium">
+              <i class="fa-solid fa-link"></i> 링크 설정
+            </button>
+            <button onclick="openGoogleSheetView()" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-lg transition flex items-center gap-1.5 font-semibold">
+              <i class="fa-solid fa-table-cells"></i> 시트 열기
+            </button>
+          </div>
+        </div>
+
+        <!-- MEMO 섹션 -->
+        <div class="bg-slate-800 rounded-xl border border-slate-700 p-5 mb-6 shadow-lg">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="font-bold text-white text-sm flex items-center gap-2">
+              <i class="fa-regular fa-note-sticky text-amber-400"></i> MEMO
+            </h3>
+            <span class="text-xs text-slate-400 font-mono">${cert.memos.length}개의 메모</span>
+          </div>
+          <div class="flex gap-2 mb-4">
+            <input id="memo-input" type="text" placeholder="자격증과 관련된 메모를 입력하세요..." 
+              class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500" 
+              onkeydown="if(event.key === 'Enter') addMemo('${cert.id}')" />
+            <button onclick="addMemo('${cert.id}')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-4 py-2 rounded-lg font-semibold transition flex items-center gap-1.5 whitespace-nowrap">
+              <i class="fa-solid fa-plus"></i> 메모 추가
+            </button>
+          </div>
+          <div class="space-y-2">
+            ${cert.memos.length === 0 ? `
+              <div class="text-xs text-slate-500 py-3 text-center bg-slate-900/50 rounded-lg border border-dashed border-slate-700">
+                등록된 메모가 없습니다.
+              </div>
+            ` : cert.memos.map(memo => `
+              <div class="flex items-center justify-between p-3 rounded-lg bg-slate-900/90 border border-slate-700/80 hover:border-slate-600 transition group">
+                <div class="flex items-start gap-2 flex-1 mr-3">
+                  <i class="fa-solid fa-thumbtack text-indigo-400 text-xs mt-1"></i>
+                  <p class="text-sm text-slate-200 leading-relaxed break-all">${memo.content}</p>
+                </div>
+                <div class="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition">
+                  <button onclick="editMemoPrompt('${cert.id}', '${memo.id}')" class="text-slate-400 hover:text-amber-300 p-1.5 rounded hover:bg-slate-800 text-xs"><i class="fa-solid fa-pen"></i></button>
+                  <button onclick="deleteMemo('${cert.id}', '${memo.id}')" class="text-slate-400 hover:text-rose-400 p-1.5 rounded hover:bg-slate-800 text-xs"><i class="fa-solid fa-trash"></i></button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- 과목 목록 및 회독 관리 -->
+        <div class="bg-slate-800 rounded-xl border border-slate-700 p-5">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-white text-sm">과목 목록 및 회독 관리</h3>
+            <button onclick="addSubjectPrompt('${cert.id}')" class="text-xs text-indigo-400 hover:underline">+ 과목 추가</button>
+          </div>
+          <div class="space-y-3">
+            ${cert.subjects.map(sub => `
+              <div class="flex items-center justify-between p-3.5 rounded-lg bg-slate-900 border border-slate-700/60">
+                <div class="flex items-center gap-3 flex-1 cursor-pointer" onclick="selectSubject('${cert.id}', '${sub.id}')">
+                  <span class="text-sm font-medium text-slate-200 hover:text-indigo-400 transition">${sub.name}</span>
+                  <span class="text-xs text-amber-400/80 ml-2 font-mono">암기카드 ${(sub.notes || []).length}개</span>
+                </div>
+                <div class="flex items-center gap-3">
+                  <button onclick="editSubjectNamePrompt('${cert.id}', '${sub.id}')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1.5 rounded transition" title="과목명 수정">
+                    <i class="fa-solid fa-pen"></i> 수정
+                  </button>
+                  <div class="flex items-center gap-1 text-xs bg-slate-800 px-2 py-1 rounded border border-slate-700">
+                    <span class="text-slate-400">회독:</span>
+                    <span class="font-semibold text-indigo-400 font-mono">${sub.count || 0}회</span>
+                    <button onclick="updateCount('${cert.id}', '${sub.id}', 1)" class="ml-1 px-1.5 py-0.5 bg-slate-700 hover:bg-slate-600 rounded text-white font-bold">+</button>
+                    <button onclick="updateCount('${cert.id}', '${sub.id}', -1)" class="px-1.5 py-0.5 bg-slate-700 hover:bg-slate-600 rounded text-white font-bold">-</button>
+                  </div>
+                  <button onclick="deleteSubject('${cert.id}', '${sub.id}')" class="text-slate-500 hover:text-rose-400 text-xs ml-1"><i class="fa-solid fa-trash"></i></button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    window.render = function() {
+      renderSidebar();
+      renderMain();
+    };
+
+    window.selectCert = function(id) {
+      window.appData.currentView = 'cert';
+      window.appData.selectedCertId = id;
+      window.appData.selectedSubId = null;
+      window.render();
+    };
+
+    window.selectSubject = function(certId, subId) {
+      window.appData.currentView = 'cert';
+      window.appData.selectedCertId = certId;
+      window.appData.selectedSubId = subId;
+      window.render();
+    };
+
+    window.openGoogleSheetView = function() {
+      window.appData.currentView = 'sheet';
+      window.render();
+    };
+
+    window.openAchievedView = function() {
+      window.appData.currentView = 'achieved';
+      window.render();
+    };
+
+    // 🏆 취득 자격증 모달 및 CRUD
+    window.openAchievedModal = function(id = null) {
+      const modal = document.getElementById('achieved-modal');
+      const titleEl = document.getElementById('achieved-modal-title');
+      const editIdInput = document.getElementById('achieved-edit-id');
+
+      if (id) {
+        const item = window.appData.achievedCerts.find(c => c.id === id);
+        if (!item) return;
+        titleEl.innerText = '취득 자격증 수정';
+        editIdInput.value = item.id;
+        document.getElementById('achieved-name').value = item.name || '';
+        document.getElementById('achieved-date').value = item.issueDate || '';
+        document.getElementById('achieved-issuer').value = item.issuer || '';
+        document.getElementById('achieved-no').value = item.certNo || '';
+        document.getElementById('achieved-memo').value = item.memo || '';
+      } else {
+        titleEl.innerText = '취득 자격증 등록';
+        editIdInput.value = '';
+        document.getElementById('achieved-name').value = '';
+        document.getElementById('achieved-date').value = '';
+        document.getElementById('achieved-issuer').value = '';
+        document.getElementById('achieved-no').value = '';
+        document.getElementById('achieved-memo').value = '';
+      }
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    };
+
+    window.closeAchievedModal = function() {
+      const modal = document.getElementById('achieved-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    };
+
+    window.saveAchievedCert = function() {
+      const editId = document.getElementById('achieved-edit-id').value;
+      const name = document.getElementById('achieved-name').value.trim();
+      const issueDate = document.getElementById('achieved-date').value;
+      const issuer = document.getElementById('achieved-issuer').value.trim();
+      const certNo = document.getElementById('achieved-no').value.trim();
+      const memo = document.getElementById('achieved-memo').value.trim();
+
+      if (!name) return alert('자격증 명칭을 입력하세요.');
+
+      if (!window.appData.achievedCerts) window.appData.achievedCerts = [];
+
+      if (editId) {
+        const item = window.appData.achievedCerts.find(c => c.id === editId);
+        if (item) {
+          item.name = name;
+          item.issueDate = issueDate;
+          item.issuer = issuer;
+          item.certNo = certNo;
+          item.memo = memo;
+        }
+      } else {
+        window.appData.achievedCerts.unshift({
+          id: 'ach_' + Date.now(),
+          name,
+          issueDate,
+          issuer,
+          certNo,
+          memo
+        });
+      }
+
+      closeAchievedModal();
+      window.saveState();
+    };
+
+    window.deleteAchievedCert = function(id) {
+      if (!confirm('이 취득 자격증을 삭제하시겠습니까?')) return;
+      window.appData.achievedCerts = window.appData.achievedCerts.filter(c => c.id !== id);
+      window.saveState();
+    };
+
+    window.setCertGoogleSheetUrlPrompt = function(certId) {
+      const cert = window.appData.certs.find(c => c.id === certId);
+      if (!cert) return;
+      const current = cert.googleSheetUrl || '';
+      const input = prompt(`[${cert.name}]에 연동할 구글 스프레드시트 공유 URL을 입력하세요:`, current);
+      if (input !== null) {
+        cert.googleSheetUrl = input.trim();
+        window.saveState();
+      }
+    };
+
+    window.editSubjectNamePrompt = function(certId, subId) {
+      const cert = window.appData.certs.find(c => c.id === certId);
+      const sub = cert.subjects.find(s => s.id === subId);
+      if (!sub) return;
+      const newName = prompt('변경할 과목명을 입력하세요:', sub.name);
+      if (newName !== null && newName.trim() !== '') {
+        sub.name = newName.trim();
+        window.saveState();
+      }
+    };
+
+    window.addSchedulePrompt = function(certId) {
+      const name = prompt('시험 명칭/회차를 입력하세요 (예: 2026년 2회차, 임시시험):', '2026년 추가 시험');
+      if (!name) return;
+      const date = prompt('시험 날짜를 입력하세요 (YYYY-MM-DD):', '2026-10-17');
+      if (!date) return;
+
+      const cert = window.appData.certs.find(c => c.id === certId);
+      if (!cert.schedules) cert.schedules = [];
+      cert.schedules.push({
+        id: 'sch_' + Date.now(),
+        name,
+        date,
+        applied: '접수예정',
+        result: '대기'
+      });
+      cert.schedules.sort((a, b) => a.date.localeCompare(b.date));
+      window.saveState();
+    };
+
+    window.editScheduleNamePrompt = function(certId, schId) {
+      const cert = window.appData.certs.find(c => c.id === certId);
+      const sch = cert.schedules.find(s => s.id === schId);
+      if (!sch) return;
+      const newName = prompt('시험 회차/명칭을 수정하세요:', sch.name);
+      if (newName !== null && newName.trim() !== '') {
+        sch.name = newName.trim();
+        window.saveState();
+      }
+    };
+
+    window.updateScheduleDate = function(certId, schId, newDate) {
+      const cert = window.appData.certs.find(c => c.id === certId);
+      const sch = cert.schedules.find(s => s.id === schId);
+      if (sch && newDate) {
+        sch.date = newDate;
+        cert.schedules.sort((a, b) => a.date.localeCompare(b.date));
+        window.saveState();
+      }
+    };
+
+    window.updateScheduleStatus = function(certId, schId, field, val) {
+      const cert = window.appData.certs.find(c => c.id === certId);
+      const sch = cert.schedules.find(s => s.id === schId);
+      if (sch) {
+        sch[field] = val;
+        window.saveState();
+      }
+    };
+
+    window.deleteSchedule = function(certId, schId) {
+      if (!confirm('이 시험 일정을 삭제하시겠습니까?')) return;
+      const cert = window.appData.certs.find(c => c.id === certId);
+      cert.schedules = cert.schedules.filter(s => s.id !== schId);
+      window.saveState();
+    };
+
+    window.addSubjectNoteInline = function(certId, subId) {
+      const titleInput = document.getElementById('note-title-input');
+      const bodyInput = document.getElementById('note-body-input');
+      const title = titleInput.value.trim();
+      const body = bodyInput.value.trim();
+
+      if (!title) return alert('암기 키워드/제목을 입력하세요.');
+
+      const cert = window.appData.certs.find(c => c.id === certId);
+      const sub = cert.subjects.find(s => s.id === subId);
+      if (!sub.notes) sub.notes = [];
+
+      sub.notes.unshift({ id: 'n_' + Date.now(), title, body, done: false });
+      titleInput.value = '';
+      bodyInput.value = '';
+      window.saveState();
+    };
+
+    window.toggleNoteDoneInline = function(certId, subId, noteId) {
+      const cert = window.appData.certs.find(c => c.id === certId);
+      const sub = cert.subjects.find(s => s.id === subId);
+      const note = sub.notes.find(n => n.id === noteId);
+      if (note) {
+        note.done = !note.done;
+        window.saveState();
+      }
+    };
+
+    window.editSubjectNoteInline = function(certId, subId, noteId) {
+      const cert = window.appData.certs.find(c => c.id === certId);
+      const sub = cert.subjects.find(s => s.id === subId);
+      const note = sub.notes.find(n => n.id === noteId);
+      if (!note) return;
+
+      const newTitle = prompt('암기 키워드/제목 수정:', note.title);
+      if (newTitle === null) return;
+      const newBody = prompt('암기 상세 내용 수정:', note.body || '');
+      if (newBody === null) return;
+
+      note.title = newTitle.trim() || note.title;
+      note.body = newBody.trim();
+      window.saveState();
+    };
+
+    window.deleteSubjectNoteInline = function(certId, subId, noteId) {
+      const cert = window.appData.certs.find(c => c.id === certId);
+      const sub = cert.subjects.find(s => s.id === subId);
+      sub.notes = sub.notes.filter(n => n.id !== noteId);
+      window.saveState();
+    };
+
+    window.addMemo = function(certId) {
+      const input = document.getElementById('memo-input');
+      const content = input.value.trim();
+      if (!content) return;
+      const cert = window.appData.certs.find(c => c.id === certId);
+      if (!cert.memos) cert.memos = [];
+      cert.memos.unshift({ id: 'm_' + Date.now(), content });
+      input.value = '';
+      window.saveState();
+    };
+
+    window.editMemoPrompt = function(certId, memoId) {
+      const cert = window.appData.certs.find(c => c.id === certId);
+      const memo = cert.memos.find(m => m.id === memoId);
+      const updated = prompt('메모를 수정하세요:', memo.content);
+      if (updated !== null && updated.trim() !== '') {
+        memo.content = updated.trim();
+        window.saveState();
+      }
+    };
+
+    window.deleteMemo = function(certId, memoId) {
+      const cert = window.appData.certs.find(c => c.id === certId);
+      cert.memos = cert.memos.filter(m => m.id !== memoId);
+      window.saveState();
+    };
+
+    window.updateCount = function(certId, subId, delta) {
+      const cert = window.appData.certs.find(c => c.id === certId);
+      const sub = cert.subjects.find(s => s.id === subId);
+      sub.count = Math.max(0, (sub.count || 0) + delta);
+      window.saveState();
+    };
+
+    window.addSubjectPrompt = function(certId) {
+      const name = prompt('추가할 과목명을 입력하세요:');
+      if (!name) return;
+      const cert = window.appData.certs.find(c => c.id === certId);
+      cert.subjects.push({ id: 's_' + Date.now(), name, count: 0, notes: [] });
+      window.saveState();
+    };
+
+    window.deleteSubject = function(certId, subId) {
+      const cert = window.appData.certs.find(c => c.id === certId);
+      cert.subjects = cert.subjects.filter(s => s.id !== subId);
+      if (window.appData.selectedSubId === subId) window.appData.selectedSubId = null;
+      window.saveState();
+    };
+
+    window.deleteCert = function(certId) {
+      if (!confirm('정말 삭제하시겠습니까?')) return;
+      window.appData.certs = window.appData.certs.filter(c => c.id !== certId);
+      if (window.appData.certs.length > 0) {
+        window.appData.selectedCertId = window.appData.certs[0].id;
+        window.appData.selectedSubId = null;
+      }
+      window.saveState();
+    };
+
+    window.openAddModal = function() { document.getElementById('modal').classList.remove('hidden'); document.getElementById('modal').classList.add('flex'); };
+    window.closeAddModal = function() { document.getElementById('modal').classList.add('hidden'); document.getElementById('modal').classList.remove('flex'); };
+
+    window.saveNewCert = function() {
+      const name = document.getElementById('new-name').value.trim();
+      const date = document.getElementById('new-date').value;
+      const sheetUrl = document.getElementById('new-sheet-url').value.trim();
+      const subs = document.getElementById('new-subjects').value.split(',').map(s => s.trim()).filter(Boolean);
+      if (!name) return alert('명칭을 입력하세요.');
+
+      const newId = 'cert_' + Date.now();
+      window.appData.certs.push({
+        id: newId,
+        name,
+        googleSheetUrl: sheetUrl,
+        schedules: date ? [{ id: 'sch_' + Date.now(), name: '2026년 1차', date: date, applied: '접수예정', result: '대기' }] : [],
+        memos: [],
+        subjects: subs.map((s, i) => ({ id: 's_' + i + '_' + Date.now(), name: s, count: 0, notes: [] }))
+      });
+      window.appData.currentView = 'cert';
+      window.appData.selectedCertId = newId;
+      window.appData.selectedSubId = null;
+      window.closeAddModal();
+      document.getElementById('new-name').value = '';
+      document.getElementById('new-date').value = '';
+      document.getElementById('new-sheet-url').value = '';
+      document.getElementById('new-subjects').value = '';
+      window.saveState();
+    };
+  </script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
+  <div class="flex h-screen overflow-hidden">
+    <!-- 좌측 사이드바 -->
+    <aside class="w-80 bg-slate-800 border-r border-slate-700 flex flex-col justify-between">
+      <div class="p-4">
+        <div class="flex items-center justify-between mb-4">
+          <h1 class="text-xl font-bold text-indigo-400 flex items-center gap-2">
+            <i class="fa-solid fa-shield-halved"></i> PassTrack
+          </h1>
+        </div>
+        <div id="sync-status" class="text-xs text-slate-400 bg-slate-900/60 p-2 rounded mb-4 flex items-center gap-2 border border-slate-700">
+          <i class="fa-solid fa-arrows-rotate animate-spin text-indigo-400"></i> 연결 중...
+        </div>
+
+        <!-- 🏆 취득 자격증 보관함 바로가기 버튼 -->
+        <button id="achieved-menu-btn" onclick="openAchievedView()" class="w-full text-left p-2.5 rounded-lg flex items-center justify-between text-sm transition text-slate-300 hover:bg-slate-700/50 mb-3 border border-slate-700/80">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-award text-amber-400 text-sm"></i>
+            <span class="font-bold">취득 자격증 보관함</span>
+          </div>
+          <span id="achieved-count-badge" class="text-xs px-2 py-0.5 rounded-full bg-slate-900 border border-slate-700 text-amber-300 font-mono font-bold">0</span>
+        </button>
+
+        <div class="flex justify-between items-center mb-3">
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">목표 자격증 / 과목</span>
+          <button onclick="openAddModal()" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded transition">
+            + 자격증 추가
+          </button>
+        </div>
+        <ul id="cert-list" class="space-y-2 overflow-y-auto max-h-[calc(100vh-320px)] pr-1"></ul>
+      </div>
+
+      <!-- 선택된 자격증 전용 구글 시트 뷰 버튼 -->
+      <div class="p-4 border-t border-slate-700">
+        <button onclick="openGoogleSheetView()" class="w-full text-xs text-emerald-300 hover:text-white py-2.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-600 border border-emerald-500/30 transition flex items-center justify-center gap-2 font-semibold">
+          <i class="fa-solid fa-table-cells text-sm"></i> <span id="sheet-btn-label">내 구글 시트 열기</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- 메인 대시보드 -->
+    <main class="flex-1 overflow-y-auto p-8 bg-slate-900">
+      <div id="main-content" class="max-w-4xl mx-auto h-full">
+        <div class="text-center py-20 text-slate-500">데이터를 불러오는 중입니다...</div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 🏆 취득 자격증 등록/수정 모달 -->
+  <div id="achieved-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center p-4 z-50">
+    <div class="bg-slate-800 rounded-xl max-w-md w-full p-6 border border-slate-700 shadow-2xl">
+      <h3 id="achieved-modal-title" class="text-lg font-bold text-white mb-4">취득 자격증 등록</h3>
+      <input type="hidden" id="achieved-edit-id" />
+      <div class="space-y-4">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">자격증 명칭 *</label>
+          <input id="achieved-name" type="text" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white focus:outline-none focus:border-amber-400" placeholder="예: 정보보안기사, CPPG" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">취득 일자</label>
+          <input id="achieved-date" type="date" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white focus:outline-none focus:border-amber-400" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">발급기관 / 주관사</label>
+          <input id="achieved-issuer" type="text" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white focus:outline-none focus:border-amber-400" placeholder="예: 한국인터넷진흥원, KISIA" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">자격증 등록/합격 번호</label>
+          <input id="achieved-no" type="text" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white focus:outline-none focus:border-amber-400" placeholder="예: 제2024-XXXX호" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">메모 / 비고</label>
+          <input id="achieved-memo" type="text" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white focus:outline-none focus:border-amber-400" placeholder="보수교육 주기, 갱신일정 등" />
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-6">
+        <button onclick="closeAchievedModal()" class="px-4 py-2 text-sm bg-slate-700 rounded text-slate-300">취소</button>
+        <button onclick="saveAchievedCert()" class="px-4 py-2 text-sm bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded">저장하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 목표 자격증 추가 모달 -->
+  <div id="modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center p-4 z-50">
+    <div class="bg-slate-800 rounded-xl max-w-md w-full p-6 border border-slate-700 shadow-2xl">
+      <h3 class="text-lg font-bold text-white mb-4">새 자격증 등록</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">자격증 명칭</label>
+          <input id="new-name" type="text" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white" placeholder="예: CISA, CISSP" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">첫 시험 목표일</label>
+          <input id="new-date" type="date" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">구글 스프레드시트 공유 URL (선택)</label>
+          <input id="new-sheet-url" type="text" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white" placeholder="https://docs.google.com/spreadsheets/d/..." />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">과목 목록 (쉼표로 구분)</label>
+          <textarea id="new-subjects" rows="3" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white" placeholder="1과목, 2과목, 3과목"></textarea>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-6">
+        <button onclick="closeAddModal()" class="px-4 py-2 text-sm bg-slate-700 rounded text-slate-300">취소</button>
+        <button onclick="saveNewCert()" class="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-500 rounded text-white font-semibold">등록하기</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
