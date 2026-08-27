@@ -14,12 +14,17 @@ export function renderCertDashboard(cert) {
   mainEl.innerHTML = `
     <div class="flex justify-between items-start mb-6">
       <div>
-        <h2 class="text-2xl font-bold text-white mb-1 flex items-center gap-3">
-          ${escapeHTML(cert.name)}
+        <div class="flex items-center gap-3 mb-1">
+          <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+            ${escapeHTML(cert.name)}
+          </h2>
+          <button onclick="window.editCertNamePrompt('${escapeHTML(cert.id)}')" class="text-xs text-slate-400 hover:text-amber-300 border border-slate-700 px-2 py-1 rounded bg-slate-800 transition flex items-center gap-1" title="자격증명 수정">
+            <i class="fa-solid fa-pen"></i> 수정
+          </button>
           <span class="text-sm bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 px-2.5 py-0.5 rounded-full font-mono font-semibold">
             ${topDday}
           </span>
-        </h2>
+        </div>
         <p class="text-sm text-slate-400">2026년 시험 일정 및 전용 구글 시트를 관리하세요.</p>
       </div>
       <button onclick="window.deleteCert('${escapeHTML(cert.id)}')" class="text-xs text-rose-400 hover:text-rose-300 border border-rose-500/30 px-3 py-1.5 rounded transition hover:bg-rose-500/10">자격증 삭제</button>
@@ -194,6 +199,18 @@ export function renderCertDashboard(cert) {
       </div>
     </div>
   `;
+}
+
+// 📌 목표 자격증명 수정 함수
+export function editCertNamePrompt(certId, onRender) {
+  const cert = appData.certs.find(c => c.id === certId);
+  if (!cert) return;
+  const newName = prompt('변경할 자격증 명칭을 입력하세요:', cert.name);
+  if (newName !== null && newName.trim() !== '') {
+    cert.name = newName.trim().slice(0, 50);
+    saveState();
+    if (onRender) onRender();
+  }
 }
 
 export function addSchedulePrompt(certId, onRender) {
