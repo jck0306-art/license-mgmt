@@ -1,7 +1,4 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyBQ0zSJleSHBjmecj1Qe-kmhLu-GDYXWE8",
   authDomain: "license-mgmt-157ed.firebaseapp.com",
   projectId: "license-mgmt-157ed",
@@ -13,7 +10,7 @@ const firebaseConfig = {
 export const DEFAULT_DATA = {
   selectedCertId: 'cert_1',
   selectedSubId: null,
-  currentView: 'cert', // 'cert' | 'sheet' | 'achieved'
+  currentView: 'cert',
   achievedCerts: [
     { id: 'ach_1', name: '정보처리기사', issueDate: '2024-06-15', issuer: '한국산업인력공단', certNo: '24-20-123456', memo: '국가기술자격' }
   ],
@@ -92,50 +89,80 @@ export const DEFAULT_DATA = {
   ]
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const docRef = doc(db, "study_dashboard", "user_data");
+let db = null;
+let isFirebaseReady = false;
 
-export let appData = null;
+if (window.firebase) {
+  try {
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    db = firebase.firestore();
+    isFirebaseReady = true;
+  } catch (e) {
+    console.error("Firebase Init Error:", e);
+  }
+}
+
+export let appData = JSON.parse(localStorage.getItem('license_mgmt_cloud_data_v1')) || DEFAULT_DATA;
+
+function ensureDataStructure() {
+  if (!appData.certs) appData.certs = DEFAULT_DATA.certs;
+  if (!appData.achievedCerts) appData.achievedCerts = [];
+  appData.certs.forEach(c => {
+    if (!c.memos) c.memos = [];
+    if (c.googleSheetUrl === undefined) c.googleSheetUrl = '';
+    if (!c.schedules) c.schedules = [];
+    if (!c.subjects) c.subjects = [];
+    c.subjects.forEach(s => { if (!s.notes) s.notes = []; });
+  });
+}
 
 export function initFirebase(onDataUpdate) {
-  onSnapshot(docRef, async (docSnap) => {
-    if (docSnap.exists()) {
-      appData = docSnap.data();
-      if (!appData.currentView) appData.currentView = 'cert';
-      if (!appData.achievedCerts) appData.achievedCerts = [];
-      appData.certs.forEach(c => {
-        if (!c.memos) c.memos = [];
-        if (c.googleSheetUrl === undefined) c.googleSheetUrl = '';
-        if (!c.schedules || c.schedules.length === 0) {
-          const defaultDate = c.targetDate || '2026-10-17';
-          c.schedules = [{ id: 'sch_' + Date.now(), name: '2026년 정기 시험', date: defaultDate, applied: '접수예정', result: '대기' }];
-        }
-        c.subjects.forEach(s => { if (!s.notes) s.notes = []; });
-      });
-    } else {
-      appData = DEFAULT_DATA;
-      await setDoc(docRef, DEFAULT_DATA);
-    }
+  ensureDataStructure();
+  
+  if (isFirebaseReady) {
+    db.collection("study_dashboard").doc("user_data").onSnapshot((docSnap) => {
+      if (docSnap.exists) {
+        appData = docSnap.data();
+        ensureDataStructure();
+      } else {
+        db.collection("study_dashboard").doc("user_data").set(DEFAULT_DATA);
+      }
+      const statusEl = document.getElementById('sync-status');
+      if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-cloud text-emerald-400"></i> 클라우드 동기화 완료';
+      onDataUpdate();
+    }, (error) => {
+      console.error("Firestore Snapshot Error:", error);
+      const statusEl = document.getElementById('sync-status');
+      if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-rose-400"></i> DB 권한/연결 오류';
+      onDataUpdate();
+    });
+  } else {
     const statusEl = document.getElementById('sync-status');
-    if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-cloud text-emerald-400"></i> 클라우드 동기화 완료';
+    if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 로컬 저장 모드';
     onDataUpdate();
-  }, (error) => {
-    console.error("Snapshot error:", error);
-    const statusEl = document.getElementById('sync-status');
-    if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-circle-exclamation text-rose-400"></i> DB 연결 오류';
-  });
+  }
 }
 
 export async function saveState() {
   if (!appData) return;
+  ensureDataStructure();
+  
+  localStorage.setItem('license_mgmt_cloud_data_v1', JSON.stringify(appData));
+  
   const statusEl = document.getElementById('sync-status');
   if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-arrows-rotate animate-spin text-amber-400"></i> 동기화 중...';
-  try {
-    await setDoc(docRef, appData);
-    if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-cloud text-emerald-400"></i> 클라우드 저장됨';
-  } catch (e) {
-    console.error("Save error:", e);
-    if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-rose-400"></i> 저장 오류';
+  
+  if (isFirebaseReady) {
+    try {
+      await db.collection("study_dashboard").doc("user_data").set(appData);
+      if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-cloud text-emerald-400"></i> 클라우드 저장됨';
+    } catch (e) {
+      console.error("Save error:", e);
+      if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-rose-400"></i> 저장 권한 오류';
+    }
+  } else {
+    if (statusEl) statusEl.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 로컬 저장 완료';
   }
 }
