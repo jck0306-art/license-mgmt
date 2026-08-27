@@ -4,10 +4,10 @@ import { renderAchievedCertsView, openAchievedModal, closeAchievedModal, saveAch
 import { renderGoogleSheetView, setCertGoogleSheetUrlPrompt } from './sheet.js';
 import { renderSubjectDetailPage, editSubjectNamePrompt, addSubjectNoteInline, toggleNoteDoneInline, editSubjectNoteInline, deleteSubjectNoteInline } from './subject.js';
 import { 
-  renderCertDashboard, addSchedulePrompt, editScheduleNamePrompt, 
-  updateScheduleDate, updateScheduleStatus, deleteSchedule, 
+renderCertDashboard, addSchedulePrompt, editScheduleNamePrompt, 
+  updateScheduleDate, updateScheduleResultDate, updateScheduleStatus, deleteSchedule, 
   addMemo, editMemoPrompt, deleteMemo, 
-  updateCount, addSubjectPrompt, deleteSubject, deleteCert 
+  updateCount, addSubjectPrompt, deleteSubject, deleteCert
 } from './dashboard.js';
 
 function render() {
@@ -89,6 +89,7 @@ window.addSchedulePrompt = certId => addSchedulePrompt(certId, render);
 window.editScheduleNamePrompt = (certId, schId) => editScheduleNamePrompt(certId, schId, render);
 window.updateScheduleDate = (certId, schId, newDate) => updateScheduleDate(certId, schId, newDate, render);
 window.updateScheduleStatus = (certId, schId, field, val) => updateScheduleStatus(certId, schId, field, val, render);
+window.updateScheduleResultDate = (certId, schId, newResultDate) => updateScheduleResultDate(certId, schId, newResultDate, render);
 window.deleteSchedule = (certId, schId) => deleteSchedule(certId, schId, render);
 window.addMemo = certId => addMemo(certId, render);
 window.editMemoPrompt = (certId, memoId) => editMemoPrompt(certId, memoId, render);
