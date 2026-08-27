@@ -15,26 +15,22 @@ function render() {
 
   renderSidebar();
 
-  // 1. 취득 자격증 보관함 뷰
   if (appData.currentView === 'achieved') {
     renderAchievedCertsView();
     return;
   }
 
-  // 2. 자격증 선택 상태 확인
   const cert = appData.certs.find(c => c.id === appData.selectedCertId) || appData.certs[0];
   if (!cert) {
     document.getElementById('main-content').innerHTML = `<div class="text-slate-500">선택된 자격증이 없습니다.</div>`;
     return;
   }
 
-  // 3. 구글 시트 뷰
   if (appData.currentView === 'sheet') {
     renderGoogleSheetView(cert);
     return;
   }
 
-  // 4. 과목 상세 또는 종합 대시보드
   if (appData.selectedSubId) {
     renderSubjectDetailPage(cert, appData.selectedSubId);
   } else {
@@ -42,7 +38,6 @@ function render() {
   }
 }
 
-// 뷰 전환 전역 바인딩
 window.render = render;
 window.selectCert = function(id) {
   appData.currentView = 'cert';
@@ -65,16 +60,13 @@ window.openAchievedView = function() {
   render();
 };
 
-// 취득 자격증 모달
 window.openAchievedModal = id => openAchievedModal(id);
 window.closeAchievedModal = closeAchievedModal;
 window.saveAchievedCert = () => saveAchievedCert(render);
 window.deleteAchievedCert = id => deleteAchievedCert(id, render);
 
-// 구글 시트
 window.setCertGoogleSheetUrlPrompt = certId => setCertGoogleSheetUrlPrompt(certId, render);
 
-// 과목 및 암기카드
 window.editSubjectNamePrompt = (certId, subId) => editSubjectNamePrompt(certId, subId, render);
 window.addSubjectNoteInline = (certId, subId) => addSubjectNoteInline(certId, subId, render);
 window.toggleNoteDoneInline = (certId, subId, noteId) => toggleNoteDoneInline(certId, subId, noteId, render);
@@ -84,7 +76,7 @@ window.updateCount = (certId, subId, delta) => updateCount(certId, subId, delta,
 window.addSubjectPrompt = certId => addSubjectPrompt(certId, render);
 window.deleteSubject = (certId, subId) => deleteSubject(certId, subId, render);
 
-// 자격증명 수정, 일정 & 메모 & 자격증 삭제
+// 자격증명 수정 & 일정 / 메모 제어
 window.editCertNamePrompt = certId => editCertNamePrompt(certId, render);
 window.addSchedulePrompt = certId => addSchedulePrompt(certId, render);
 window.editScheduleNamePrompt = (certId, schId) => editScheduleNamePrompt(certId, schId, render);
@@ -97,7 +89,6 @@ window.editMemoPrompt = (certId, memoId) => editMemoPrompt(certId, memoId, rende
 window.deleteMemo = (certId, memoId) => deleteMemo(certId, memoId, render);
 window.deleteCert = certId => deleteCert(certId, render);
 
-// 새 자격증 추가 모달
 window.openAddModal = function() {
   const modal = document.getElementById('modal');
   modal.classList.remove('hidden');
