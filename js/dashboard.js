@@ -39,7 +39,7 @@ export function renderCertDashboard(cert) {
         <button onclick="window.addSchedulePrompt('${escapeHTML(cert.id)}')" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1.5 rounded transition flex items-center gap-1 font-semibold">
           <i class="fa-solid fa-plus"></i> 시험 일정 추가
         </button>
-      </div>
+      </div> 
 
       <div class="overflow-x-auto">
         <table class="w-full text-left text-xs">
