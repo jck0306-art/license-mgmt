@@ -1,4 +1,4 @@
-import { appData, saveState } from './firebase.js';
+import { appData, saveState } from './firebase.js'; 
 
 export function renderAchievedCertsView() {
   const list = appData.achievedCerts || [];
