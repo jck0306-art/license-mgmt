@@ -38,29 +38,36 @@ function render() {
   }
 }
 
+// 모바일 화면일 때만 항목 클릭 시 사이드바를 자동으로 닫아줍니다.
+function closeSidebarIfMobile() {
+  if (window.innerWidth < 768 && typeof window.toggleSidebar === 'function') {
+    window.toggleSidebar(false);
+  }
+}
+
 window.render = render;
 window.selectCert = function(id) {
   appData.currentView = 'cert';
   appData.selectedCertId = id;
   appData.selectedSubId = null;
-  window.toggleSidebar?.(false); // 모바일에서 선택 후 사이드바 닫기
+  closeSidebarIfMobile();
   render();
 };
 window.selectSubject = function(certId, subId) {
   appData.currentView = 'cert';
   appData.selectedCertId = certId;
   appData.selectedSubId = subId;
-  window.toggleSidebar?.(false); // 모바일에서 선택 후 사이드바 닫기
+  closeSidebarIfMobile();
   render();
 };
 window.openGoogleSheetView = function() {
   appData.currentView = 'sheet';
-  window.toggleSidebar?.(false);
+  closeSidebarIfMobile();
   render();
 };
 window.openAchievedView = function() {
   appData.currentView = 'achieved';
-  window.toggleSidebar?.(false);
+  closeSidebarIfMobile();
   render();
 };
 
