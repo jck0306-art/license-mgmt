@@ -43,20 +43,24 @@ window.selectCert = function(id) {
   appData.currentView = 'cert';
   appData.selectedCertId = id;
   appData.selectedSubId = null;
+  window.toggleSidebar?.(false); // 모바일에서 선택 후 사이드바 닫기
   render();
 };
 window.selectSubject = function(certId, subId) {
   appData.currentView = 'cert';
   appData.selectedCertId = certId;
   appData.selectedSubId = subId;
+  window.toggleSidebar?.(false); // 모바일에서 선택 후 사이드바 닫기
   render();
 };
 window.openGoogleSheetView = function() {
   appData.currentView = 'sheet';
+  window.toggleSidebar?.(false);
   render();
 };
 window.openAchievedView = function() {
   appData.currentView = 'achieved';
+  window.toggleSidebar?.(false);
   render();
 };
 
