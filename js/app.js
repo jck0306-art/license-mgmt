@@ -9,20 +9,43 @@ import {
   addMemo, editMemoPrompt, deleteMemo, 
   updateCount, addSubjectPrompt, deleteSubject, deleteCert 
 } from './dashboard.js';
+import { 
+  renderNotesView, filterNotes, openNoteModal, closeNoteModal, saveNoteItem, deleteNoteItem,
+  toggleAiTutorDrawer, openGeminiKeyModal, closeGeminiKeyModal, saveGeminiKey, 
+  clearChatHistory, handleSendChatMessage, askAiAboutNote, updateNotesCountBadge 
+} from './tutor.js';
+import { initAuthGuard, logoutAdmin } from './security.js';
 
 function render() {
   if (!appData) return;
 
   renderSidebar();
+  updateNotesCountBadge();
 
+  const mainContent = document.getElementById('main-content');
+  const notesView = document.getElementById('notes-view-content');
+
+  // 1. 취득 자격증 보관함 뷰
   if (appData.currentView === 'achieved') {
+    if (mainContent) mainContent.classList.remove('hidden');
+    if (notesView) notesView.classList.add('hidden');
     renderAchievedCertsView();
     return;
   }
 
+  // 2. 📝 신규: 필기 요약 노트 보관함 뷰
+  if (appData.currentView === 'notes') {
+    renderNotesView();
+    return;
+  }
+
+  // 3. 기존 자격증 상세 및 대시보드 뷰
+  if (mainContent) mainContent.classList.remove('hidden');
+  if (notesView) notesView.classList.add('hidden');
+
   const cert = appData.certs.find(c => c.id === appData.selectedCertId) || appData.certs[0];
   if (!cert) {
-    document.getElementById('main-content').innerHTML = `<div class="text-slate-500">선택된 자격증이 없습니다.</div>`;
+    if (mainContent) mainContent.innerHTML = `<div class="text-slate-500 text-center py-20">선택된 자격증이 없습니다.</div>`;
     return;
   }
 
@@ -38,7 +61,6 @@ function render() {
   }
 }
 
-// 모바일 화면일 때만 항목 클릭 시 사이드바를 자동으로 닫아줍니다.
 function closeSidebarIfMobile() {
   if (window.innerWidth < 768 && typeof window.toggleSidebar === 'function') {
     window.toggleSidebar(false);
@@ -46,6 +68,9 @@ function closeSidebarIfMobile() {
 }
 
 window.render = render;
+window.logoutAdmin = logoutAdmin;
+
+// 메뉴 전환 바인딩
 window.selectCert = function(id) {
   appData.currentView = 'cert';
   appData.selectedCertId = id;
@@ -71,13 +96,36 @@ window.openAchievedView = function() {
   render();
 };
 
+// 📝 필기 요약 노트 전역 바인딩
+window.openNotesView = function() {
+  appData.currentView = 'notes';
+  closeSidebarIfMobile();
+  render();
+};
+window.renderNotesView = renderNotesView;
+window.filterNotes = filterNotes;
+window.openNoteModal = id => openNoteModal(id);
+window.closeNoteModal = closeNoteModal;
+window.saveNoteItem = () => saveNoteItem(render);
+window.deleteNoteItem = id => deleteNoteItem(id, render);
+
+// 🤖 AI 튜터 챗봇 전역 바인딩
+window.toggleAiTutorDrawer = forceOpen => toggleAiTutorDrawer(forceOpen);
+window.openGeminiKeyModal = openGeminiKeyModal;
+window.closeGeminiKeyModal = closeGeminiKeyModal;
+window.saveGeminiKey = saveGeminiKey;
+window.clearChatHistory = clearChatHistory;
+window.handleSendChatMessage = handleSendChatMessage;
+window.askAiAboutNote = noteId => askAiAboutNote(noteId);
+
+// 취득 자격증 바인딩
 window.openAchievedModal = id => openAchievedModal(id);
 window.closeAchievedModal = closeAchievedModal;
 window.saveAchievedCert = () => saveAchievedCert(render);
 window.deleteAchievedCert = id => deleteAchievedCert(id, render);
 
+// 구글 시트 및 과목 세부 설정
 window.setCertGoogleSheetUrlPrompt = certId => setCertGoogleSheetUrlPrompt(certId, render);
-
 window.editSubjectNamePrompt = (certId, subId) => editSubjectNamePrompt(certId, subId, render);
 window.addSubjectNoteInline = (certId, subId) => addSubjectNoteInline(certId, subId, render);
 window.toggleNoteDoneInline = (certId, subId, noteId) => toggleNoteDoneInline(certId, subId, noteId, render);
@@ -100,6 +148,7 @@ window.editMemoPrompt = (certId, memoId) => editMemoPrompt(certId, memoId, rende
 window.deleteMemo = (certId, memoId) => deleteMemo(certId, memoId, render);
 window.deleteCert = certId => deleteCert(certId, render);
 
+// 새 자격증 추가 모달
 window.openAddModal = function() {
   const modal = document.getElementById('modal');
   modal.classList.remove('hidden');
@@ -138,6 +187,20 @@ window.saveNewCert = function() {
   render();
 };
 
+// 🌟 Google 관리자 계정 인증 후 앱 실행
 window.addEventListener('DOMContentLoaded', () => {
-  initFirebase(render);
+  initAuthGuard(false, () => {
+    initFirebase(render);
+  });
+
+  // 엔터키로 챗봇 메시지 전송 (Shift+Enter는 줄바꿈)
+  const chatInput = document.getElementById('chat-input');
+  if (chatInput) {
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSendChatMessage();
+      }
+    });
+  }
 });
