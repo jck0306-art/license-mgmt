@@ -14,6 +14,25 @@ export const DEFAULT_DATA = {
   achievedCerts: [
     { id: 'ach_1', name: '정보처리기사', issueDate: '2024-06-15', issuer: '한국산업인력공단', certNo: '24-20-123456', memo: '국가기술자격' }
   ],
+  // 📝 신규: AI 튜터가 참조할 핵심 공부 노트 컬렉션
+  studyNotes: [
+    {
+      id: 'note_1',
+      subject: '산업보안관리사 1과목',
+      title: '벨-라파둘라 (Bell-LaPadula, BLP) 모델',
+      tags: ['접근통제', '기밀성', '보안모델', 'No-Read-Up'],
+      content: '군대 보안 구조에서 유래된 기밀성(Confidentiality) 중심 모델.\n- 단순 보안 속성 (Simple Security Property): No Read Up (낮은 등급은 높은 등급 읽기 불가)\n- 스타 속성 (*-Property): No Write Down (높은 등급은 낮은 등급에 쓰기 불가)\n- 트로이 목마와 같은 악성코드에 의한 기밀 유출 방지에 특화됨.',
+      updatedAt: '2026-09-15'
+    },
+    {
+      id: 'note_2',
+      subject: '정보보안기사 실기',
+      title: 'Snort 침입탐지 룰 기본 문법',
+      tags: ['Snort', 'IDS', '네트워크보안', '규칙'],
+      content: '기본 구조: [Rule Header] [Rule Options]\n- Header: action proto src_ip src_port -> dst_ip dst_port\n- Action 종류: alert, log, pass, drop, reject\n- Options 주요 키워드:\n  * msg: "로그에 남길 메시지"\n  * content: "검사할 페이로드 문자열"\n  * nocase: 대소문자 구분 없음\n  * sid: 룰 고유 ID (사용자 정의는 1,000,000 이상)',
+      updatedAt: '2026-09-15'
+    }
+  ],
   certs: [
     {
       id: 'cert_1',
@@ -109,6 +128,8 @@ export let appData = JSON.parse(localStorage.getItem('license_mgmt_cloud_data_v1
 function ensureDataStructure() {
   if (!appData.certs) appData.certs = DEFAULT_DATA.certs;
   if (!appData.achievedCerts) appData.achievedCerts = [];
+  if (!appData.studyNotes) appData.studyNotes = DEFAULT_DATA.studyNotes || [];
+  
   appData.certs.forEach(c => {
     if (!c.memos) c.memos = [];
     if (c.googleSheetUrl === undefined) c.googleSheetUrl = '';
